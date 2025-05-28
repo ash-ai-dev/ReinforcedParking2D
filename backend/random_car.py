@@ -19,30 +19,8 @@ pygame.display.set_caption("Car Movement Modes")
 obstacles = []
 dynamic_yellow_obstacles = []
 
-
-
-def extract_yellow_lines_near_car(surface, car_position, sensor_range):
-    yellow_threshold = 60
-    width, height = surface.get_size()
-    pixels = pygame.surfarray.pixels3d(surface)
-    cx, cy = car_position
-
-    new_positions = set()
-
-    for x in range(max(0, cx - sensor_range), min(width, cx + sensor_range), 3):
-        for y in range(max(0, cy - sensor_range), min(height, cy + sensor_range), 3):
-            if math.hypot(x - cx, y - cy) > sensor_range:
-                continue
-            r, g, b = pixels[x][y]
-            if abs(r - 255) < yellow_threshold and abs(g - 255) < yellow_threshold and b < yellow_threshold:
-                new_positions.add((x, y))
-
-    return new_positions
-
-
-
 # Load and scale background
-background = pygame.image.load("background.jpg")
+background = pygame.image.load("background.png")
 background = pygame.transform.scale(background, (WIDTH, HEIGHT))
 
 # Colors and fonts
@@ -78,22 +56,50 @@ clock = pygame.time.Clock()
 # Functions
 # ================================
 
+def is_yellow(r, g, b, brightness_threshold=160, blue_threshold=120, rg_diff=80):
+    """Accurate yellow detection."""
+    # Brightness must be high enough
+    if r > brightness_threshold and g > brightness_threshold:
+        # Blue must be low
+        if b < blue_threshold:
+            # Red and green must be close (to differentiate from orange or green)
+            if abs(r - g) < rg_diff:
+                return True
+    return False
+
+def extract_yellow_lines_near_car(surface, car_position, sensor_range):
+    yellow_threshold = 60
+    width, height = surface.get_size()
+    pixels = pygame.surfarray.pixels3d(surface)
+    cx, cy = car_position
+
+    new_positions = set()
+
+    for x in range(max(0, cx - sensor_range), min(width, cx + sensor_range), 4):
+        for y in range(max(0, cy - sensor_range), min(height, cy + sensor_range), 4):
+            if math.hypot(x - cx, y - cy) > sensor_range:
+                continue
+            r, g, b = [int(c) for c in pixels[x][y]]
+            if is_yellow(r, g, b):
+                new_positions.add((x, y))
+
+    return new_positions
+
+
 def update_dynamic_yellow_obstacles(car_pos, sensor_range):
     global dynamic_yellow_obstacles
     new_positions = extract_yellow_lines_near_car(background, car_pos, sensor_range)
 
-    # Current positions of dynamic obstacles
-    current_positions = set((obs.x, obs.y) for obs in dynamic_yellow_obstacles)
+    current_positions = set((obs.start, obs.end) for obs in dynamic_yellow_obstacles)
+    dynamic_yellow_obstacles = [obs for obs in dynamic_yellow_obstacles if (obs.start, obs.end) in new_positions]
 
-    # Remove obstacles no longer in range
-    dynamic_yellow_obstacles = [obs for obs in dynamic_yellow_obstacles if (obs.x, obs.y) in new_positions]
-
-    # Add new obstacles found (avoid duplicates)
-    added_positions = set((obs.x, obs.y) for obs in dynamic_yellow_obstacles)
-    for pos in new_positions:
-        if pos not in added_positions:
-            dynamic_yellow_obstacles.append(LineSegment(pos[0], pos[1]))
-
+    added_positions = set((obs.start, obs.end) for obs in dynamic_yellow_obstacles)
+    for x, y in new_positions:
+        # Line segment of small length centered at (x, y)
+        start = (x - 2, y)
+        end = (x + 2, y)
+        if (start, end) not in added_positions:
+            dynamic_yellow_obstacles.append(LineSegment(start, end))
 
 def update_logic(car, mode):
     keys = pygame.key.get_pressed()
@@ -216,7 +222,7 @@ def main():
         update_logic(car, mode)
         draw_ui(mode)
         car.draw(screen)
-        sensor_range = 100
+        sensor_range = 150
         update_dynamic_yellow_obstacles((int(car.x), int(car.y)), sensor_range)
         car.cast_sensor(obstacles + dynamic_yellow_obstacles, screen)
         pygame.display.flip()
