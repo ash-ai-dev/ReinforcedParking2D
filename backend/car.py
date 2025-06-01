@@ -221,14 +221,14 @@ class Car:
         # Constants
         REVERSE_SPEED = -1.5
         FORWARD_SPEED = 2.0
-        PARKING_ANGLE = math.radians(28)       # Sharper correction
+        PARKING_ANGLE = math.radians(28)
         CENTERING_ANGLE = math.radians(5)
         
         REAR_CLEARANCE = 30
         SIDE_CLEARANCE = 40
         LINE_DANGER_THRESHOLD = 25
         SUCCESS_TIMER_LIMIT = 40
-        RECOVERY_FRAMES = 25                   # Number of frames to recover
+        RECOVERY_FRAMES = 25 
 
         # Sensor readings
         rear_center = self.sensor_data.get("Rear Center", 200)
@@ -254,7 +254,7 @@ class Car:
                 self.recovery_steering_angle = PARKING_ANGLE  # Steer left
             else:
                 self.recovery_steering_angle = -PARKING_ANGLE # Steer right
-            print(f"🚨 Too close to line! Initiating recovery. Sides: {side_left}, {side_right}")
+            print(f"Too close to line! Initiating recovery. Sides: {side_left}, {side_right}")
             return  # Start recovery next frame
 
         # Check if well parked
@@ -283,4 +283,4 @@ class Car:
             self.speed = 0
             self.steering_angle = 0
             self.auto_state = "parked"
-            print("✅ Successfully parked!")
+            print("Successfully parked!")

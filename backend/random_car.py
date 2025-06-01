@@ -57,7 +57,6 @@ clock = pygame.time.Clock()
 # ================================
 
 def is_yellow(r, g, b, brightness_threshold=160, blue_threshold=120, rg_diff=80):
-    """Accurate yellow detection."""
     # Brightness must be high enough
     if r > brightness_threshold and g > brightness_threshold:
         # Blue must be low
